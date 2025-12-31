@@ -1,0 +1,11 @@
+import { Controller, Post } from '@nestjs/common';
+import { UppercasePipe } from 'src/common/pipes/uppercase/uppercase.pipe';
+import { Body } from '@nestjs/common';
+
+@Controller('myname')
+export class MynameController {
+    @Post('custom')
+    transformName(@Body('name', new UppercasePipe()) name:string){
+        return {message:`Received name is ${name}`};
+    }
+}

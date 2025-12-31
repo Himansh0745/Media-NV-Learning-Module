@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple Socket.IO Chat</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; margin: 24px; background:#f7f7f7; }
+      .box { max-width: 720px; margin: 0 auto; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 16px; }
+      h1 { font-size: 20px; margin: 0 0 12px; }
+      #log { height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 8px; border-radius: 6px; background:#fafafa; }
+      .row { display: flex; gap: 8px; margin-top: 12px; }
+      input { flex: 1; padding: 10px; font-size: 14px; border:1px solid #ddd; border-radius:6px; }
+      button { padding: 10px 14px; font-size: 14px; border: 0; border-radius: 6px; background:#2563eb; color:#fff; cursor: pointer; }
+      .muted { color:#666; font-size: 12px; }
+      .you { color:#0a7; }
+      .reply { color:#a50; }
+      .broadcast { color:#06c; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>Simple Socket.IO Chat</h1>
+      <div id="log" aria-live="polite"></div>
+      <div class="row">
+        <input id="messageInput" placeholder="Type a message..." />
+        <button id="sendBtn">Send</button>
+      </div>
+      <p class="muted">Events: connect, disconnect, emit (reply), broadcast</p>
+    </div>
+
+    <!-- Load Socket.IO client from CDN -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      // Connect to backend WebSocket server (Socket.IO) on port 8080
+      let socket = null; // will hold the client instance
+      if (window.io) {
+        socket = io('http://localhost:8080'); // connect
+      }
+
+      const log = document.getElementById('log');
+      const input = document.getElementById('messageInput');
+      const btn = document.getElementById('sendBtn');
+
+      function addLine(text, cls) {
+        const div = document.createElement('div');
+        if (cls) div.className = cls;
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      // Set up connection events if client is ready
+      if (socket) {
+        socket.on('connect', () => {
+          addLine(`Connected (id: ${socket.id})`, 'muted'); // connect
+        });
+        socket.on('connect_error', (err) => {
+          addLine(`Connect error: ${err.message}`, 'muted'); // connection error
+        });
+        socket.on('disconnect', (reason) => {
+          addLine(`Disconnected: ${reason}`, 'muted'); // disconnect
+        });
+      } else {
+        addLine('Socket.IO client failed to load. Check CDN/network.', 'muted');
+      }
+
+      // When we click Send, emit a 'message' event to server
+      btn.addEventListener('click', () => {
+        const msg = input.value.trim();
+        if (!msg) return;
+        addLine(`You: ${msg}`, 'you'); // show our sent message immediately
+        if (socket) {
+          socket.emit('message', msg); // emit: send to backend (server will reply + broadcast)
+        } else {
+          addLine('Cannot send: Socket.IO client not loaded', 'muted');
+        }
+        input.value = '';
+        input.focus();
+      });
+
+      // Allow pressing Enter to send
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btn.click();
+      });
+
+      // Receive server reply and broadcast if client is ready
+      if (socket) {
+        socket.on('reply', (text) => {
+          addLine(`Reply: ${text}`, 'reply'); // reply from server
+        });
+        socket.on('broadcast', (text) => {
+          addLine(`Broadcast: ${text}`, 'broadcast'); // broadcast
+        });
+      }
+    </script>
+  </body>
+</html>
